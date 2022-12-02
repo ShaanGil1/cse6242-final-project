@@ -1,0 +1,34 @@
+.tooltip {
+    line-height: 1;
+    padding: 12px;
+    background: rgba(27, 27, 27, 0.8);
+    color: #fff;
+    border-radius: 2px;
+    font-size: 20px;
+}
+
+.tooltip.n:after {
+    margin: -10px 0 0 0;
+    top: 100%;
+    left: 0;
+}
+
+#table {
+    display: table;
+}
+
+#label {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+#choropleth {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.states {
+    fill: none;
+    stroke: rgb(90, 88, 88);
+    stroke-linejoin: round;
+}
