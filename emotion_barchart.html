@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<!-- To view in browser: python3 -m http.server 8080 & -->
+<!-- Then visit http://0.0.0.0:8080/interactive.html in your browser -->
+<head>
+  <meta charset="utf-8">
+  <!-- define CSS rules -->
+  <style>
+    .axis text {
+      fill: black;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- LIBRARY IMPORT -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@5"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+
+  <!-- UI elements to choose which variable to view across time, then slice by emotion -->
+  <fieldset name="emotion_checkboxes">
+    <label>Emotion: </label>
+    <input type="checkbox" id="happy_checkbox" name="happy_check" checked="True">
+    <label for="happy_check">Happy</label>
+    <input type="checkbox" id="angry_checkbox" name="angry_check" checked="True">
+    <label for="angry_check">Angry</label>
+    <input type="checkbox" id="surprise_checkbox" name="surprise_check" checked="True">
+    <label for="surprise_check">Surprise</label>
+    <input type="checkbox" id="sad_checkbox" name="sad_check" checked="True">
+    <label for="sad_check">Sad</label>
+    <input type="checkbox" id="fear_checkbox" name="fear_check" checked="True">
+    <label for="fear_check">Fear</label>
+    <br/>
+    <br/>
+    <label> Variable: </label>
+    <select id="statistics_selector">
+      <option value="0">Number of Tweets</option>
+      <option value="1">Number of Sensitive Tweets</option>
+      <option value="2">Number of Likes</option>
+      <option value="3">Number of Retweets</option>
+    </select>
+  </fieldset>
+
+  <!-- D3 -->
+  <script>
+    // define the dimensions and margins for the line chart
+    // Use the same Margin Convention from HW1 Q3: https://poloclub.github.io/cse6242-2022spring-online/hw1/8rEHLaYmr9 _margin_convention.pdf to layout your graph
+    const width = 960;
+    const height = 500;
+    const margin = {top: 20, right: 10, bottom: 20, left: 10};
+    const padding = 70;
+    const innerWidth = width - margin.left - margin.right - 2*padding;
+    const innerHeight = height - margin.top - margin.bottom - 2*padding;
+    // Statistics we support
+    const statistics = [ '', 'is_sensitive', 'likes_count', 'retweet_count' ];
+    const statistics_formatted = [ 'Number of Tweets', "Number of Sensitive Tweets", "Number of Likes", "Number of Retweets" ];
+    var statistic_display = 0;
+    var emotion_display = { "happy": true, "angry": true, "surprise": true, "sad": true, "fear": true };
+
+    let svg = d3
+      .select("body")
+      .append("svg")
+      .attr("id", "line_chart")
+      .attr("width", width)
+      .attr("height", height)
+      .append("g")
+      .attr("id", "container")
+      .attr("width", innerWidth )
+      .attr("height", innerHeight)
+      .attr("transform",
+        "translate(" + (margin.left+padding) + "," + margin.top + ")");
+
+    var happy_check = d3.select("#happy_checkbox");
+    var angry_check = d3.select("#angry_checkbox");
+    var surprise_check = d3.select("#surprise_checkbox");
+    var sad_check = d3.select("#sad_checkbox");
+    var fear_check = d3.select("#fear_checkbox");
+    var statistics_selector = d3.select("#statistics_selector");
+    happy_check.on("change", updateEmotion);
+    angry_check.on("change", updateEmotion);
+    surprise_check.on("change", updateEmotion);
+    sad_check.on("change", updateEmotion);
+    fear_check.on("change", updateEmotion);
+    statistics_selector.on("change", updateEmotionStatistic);
+    
+    // Fetch the data
+    var pathToCsv = "data_with_sentiment_and_emotion.csv";
+    var sentiment_and_emotion_data;
+
+    function updateEmotionStatistic() {
+      eraseEmotionHistogram();
+      statistic_display = parseInt( d3.select(this).property("value") );
+      drawEmotionHistogram( sentiment_and_emotion_data );
+    }
+
+    function updateEmotion() {
+      eraseEmotionHistogram();
+      emotion_display.happy = happy_check.property("checked");
+      emotion_display.angry = angry_check.property("checked");
+      emotion_display.surprise = surprise_check.property("checked");
+      emotion_display.sad = sad_check.property("checked");
+      emotion_display.fear = fear_check.property("checked");
+      let filtered_data = sentiment_and_emotion_data.filter( (d, i) => { 
+        return ( emotion_display.happy && d.emotion_type === 'happy' ) || 
+          ( emotion_display.angry && d.emotion_type === 'angry' ) ||
+          ( emotion_display.surprise && d.emotion_type === 'surprise' ) ||
+          ( emotion_display.sad && d.emotion_type === 'sad' ) ||
+          ( emotion_display.fear && d.emotion_type === 'fear' );
+      });
+      drawEmotionHistogram( filtered_data );
+    }
+
+    function drawEmotionHistogram(data) {
+      // Scaling
+      number_of_bins = Math.sqrt( data.length );
+      const xScale = d3.scaleLinear().range([0,innerWidth]);
+      xScale.domain( d3.extent( data, d => d3.timeWeek( d.created_at ) ) );
+      var histogramify = d3.histogram()
+        .value( d => d3.timeWeek( d.created_at ) )
+        .domain( xScale.domain() )
+        .thresholds( xScale.ticks( number_of_bins ) )
+      var histogram_raw = histogramify( data )
+      var histogram;
+      // Change summary statistics with user choice
+      if ( statistic_display == 0 )
+        histogram = histogram_raw.map( e => { return { 'x0': e.x0, 'x1': e.x1, 'y': e.length }; } );
+      else
+        histogram = histogram_raw.map( e => { 
+          return { 'x0': e.x0, 'x1': e.x1, 'y': d3.sum( e, i => i[ statistics[statistic_display] ] ) };
+        });
+      const yScale = d3.scaleLinear().rangeRound([innerHeight, 0]);
+      yScale.domain( [ 0, d3.max( histogram, h => h.y ) ] );
+
+      //-----------------------------AXES-----------------------------//
+      const yaxis = d3.axisLeft()
+          .ticks(20)
+          .scale(yScale);
+
+      const xaxis = d3.axisBottom()
+          .ticks(20)
+          .tickFormat( d3.timeFormat("%m-%y") )
+          .scale(xScale);
+
+      svg.append("g")
+          .attr("class", "axis")
+          .attr("id", "emotion-x-axis-lines")
+          .attr("transform", "translate(0," + (innerHeight) + ")")
+          .call(xaxis)
+          .append("text")
+          .attr("transform", "translate(" + (innerWidth/2) + "," + "30)")
+          .text("Time");
+
+      svg.append("g")
+          .attr("class", "axis")
+          .attr("id", "emotion-y-axis-lines")
+          .call(yaxis)
+          .append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("dy", "-5em")
+          .attr("x", -height/4)
+          .text( statistics_formatted[ statistic_display ] );
+
+      //----------------------------LINES-----------------------------//
+      const emotion_histogram_container = svg.append("g").attr("id", "emotion-histogram");
+      emotion_histogram_container.selectAll("rect").data(histogram).enter().append("rect")
+        .attr("x", 1)
+        .attr("transform", (d) => { return "translate(" + xScale(d.x0) + "," + yScale(d.y) + ")"; })
+        .attr("width", (d) => { return 5. * (xScale(d.x1) - xScale(d.x0) - 1); })
+        .attr("height", (d) => { return innerHeight - yScale(d.y); })
+        .style("fill", "red")
+    }
+
+    function eraseEmotionHistogram() {
+      d3.select("#emotion-histogram").remove();
+      d3.select("#emotion-y-axis-lines").remove();
+      d3.select("#emotion-x-axis-lines").remove();
+    }
+
+    // Read from CSV and cast to appropriate data types
+    d3.dsv(",", pathToCsv, (d) => {
+      let happy = parseFloat( d['Happy'] );
+      let angry = parseFloat( d['Angry'] );
+      let surprise = parseFloat( d['Surprise'] );
+      let sad = parseFloat( d['Sad'] );
+      let fear = parseFloat( d['Fear'] );
+      // Assign tweet to emotion if emotion bears max score
+      let maxVal = Math.max( happy, angry, surprise, sad, fear );
+      let emotion_type = '';
+      if ( happy == maxVal )
+        emotion_type = 'happy';
+      else if ( angry == maxVal )
+        emotion_type = 'angry';
+      else if ( surprise == maxVal )
+        emotion_type = 'surprise';
+      else if ( sad == maxVal )
+        emotion_type = 'sad';
+      else if ( fear == maxVal )
+        emotion_type = 'fear';
+      return {
+        // format data attributes if required
+        tweet_id: d['tweet_id'],
+        created_at: d3.isoParse( d['created_at'] ),
+        retweet_count: parseInt( d['retweet_count'] ),
+        likes_count: parseInt( d['likes_count'] ),
+        quote_count: parseInt( d['quote_count'] ),
+        is_sensitive: d['is_sensitive'] === "True" ? 1 : 0,
+        emotion_type: emotion_type
+      }
+    }).then( (data) => {
+      sentiment_and_emotion_data = data;
+      drawEmotionHistogram( sentiment_and_emotion_data );
+    }).catch( (error) => {
+      console.log(error);
+    });
+
+
+  </script>
+
+</body>

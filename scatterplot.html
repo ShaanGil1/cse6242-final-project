@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+
+<!-- To view in browser: python3 -m http.server 8080 & -->
+<!-- Then visit http://0.0.0.0:8080/interactive.html in your browser -->
+<head>
+  <meta charset="utf-8">
+  <!-- define CSS rules -->
+  <style>
+    .axis text {
+      fill: black;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- LIBRARY IMPORTS -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@5"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+
+  <!-- UI Elements to select columns of CSV to scatter -->
+  <fieldset>
+    <select id="dependent-variable-selector"></select>
+    <select id="independent-variable-selector"></select>
+  </fieldset>
+
+  <!-- D3 -->
+  <script>
+    // define the dimensions and margins for the line chart
+    // Use the same Margin Convention from HW1 Q3: https://poloclub.github.io/cse6242-2022spring-online/hw1/8rEHLaYmr9 _margin_convention.pdf to layout your graph
+    const width = 960;
+    const height = 500;
+    const margin = {top: 20, right: 10, bottom: 20, left: 10};
+    const padding = 70;
+    const innerWidth = width - margin.left - margin.right - 2*padding;
+    const innerHeight = height - margin.top - margin.bottom - 2*padding;
+    // Variables we allow user to select from
+    const variables = [ 'Year', 'Month', 'neg', 'neu', 'pos', 'compound', 'Happy', 'Angry', 'Surprise', 'Sad', 'Fear', 'Administered_Dose1_Pop_Pct', 'Series_Complete_Pop_Pct', 'Additional_Doses_Vax_Pct' ];
+    const variables_formatted = [ 
+      'Year', 
+      'Month', 
+      'Negativity', 
+      'Neutrality',
+      'Positivity', 
+      'Compound Emotion', 
+      'Happiness',
+      'Anger',
+      'Surprise',
+      'Sadness',
+      'Fear', 
+      'Percentage of Population with 1 Dose Administered', 
+      'Percentage of Population with 2 Doses Administered', 
+      'Percentage of Population with Booster Doses Administered' 
+    ];
+    // Default is 'Percentage of Population with 2 Doses Administered' vs 'Anger'
+    var dependent_variable = 12;
+    var independent_variable = 7;
+
+    // append svg element to the body of the page
+    // set dimensions and position of the svg element
+    let svg = d3
+      .select("body")
+      .append("svg")
+      .attr("id", "line_chart")
+      .attr("width", width)
+      .attr("height", height)
+      .append("g")
+      .attr("id", "container")
+      .attr("width", innerWidth )
+      .attr("height", innerHeight)
+      .attr("transform",
+        "translate(" + (margin.left+padding) + "," + margin.top + ")");
+
+    // Set options for UI elements based on our subset and defaults
+    let dep_var_selector = d3.select("#dependent-variable-selector");
+    let indep_var_selector = d3.select("#independent-variable-selector");
+    for ( let i = 0; i < variables_formatted.length; ++i ) {
+      if ( i == dependent_variable )
+        dep_var_selector.append("option").attr("value", i).attr("selected", "true").text( variables_formatted[i] );
+      else
+        dep_var_selector.append("option").attr("value", i).text( variables_formatted[i] );
+      if ( i == independent_variable )
+        indep_var_selector.append("option").attr("value", i).attr("selected", "true").text( variables_formatted[i] );
+      else
+        indep_var_selector.append("option").attr("value", i).text( variables_formatted[i] );
+    }
+    dep_var_selector.on("change", updateDependentVariable)
+    indep_var_selector.on("change", updateIndependentVariable)
+    
+    // Fetch the data
+    var pathToCsv = "monthly_vax_sentiment_emotion.csv";
+    var monthly_vax_sentiment_emotion_data;
+
+    function updateDependentVariable() {
+      eraseScatterPlot();
+      dependent_variable = parseInt( d3.select(this).property("value") );
+      drawScatterPlot();
+    }
+
+    function updateIndependentVariable() {
+      eraseScatterPlot();
+      independent_variable = parseInt( d3.select(this).property("value") );
+      drawScatterPlot();
+    }
+
+    function drawScatterPlot() {
+      // Scaling
+      const xScale = d3.scaleLinear().range([0,innerWidth]);
+      xScale.domain( d3.extent( monthly_vax_sentiment_emotion_data, d => d[ variables[independent_variable] ] ) );
+      const yScale = d3.scaleLinear().rangeRound([innerHeight, 0]);
+      yScale.domain( d3.extent( monthly_vax_sentiment_emotion_data, d => d[ variables[dependent_variable] ] ) );
+
+      //-----------------------------AXES-----------------------------//
+      const yaxis = d3.axisLeft()
+          .ticks(20)
+          .scale(yScale);
+          
+      const xaxis = d3.axisBottom()
+          .ticks(20)
+          .scale(xScale);
+
+      svg.append("g")
+          .attr("class", "axis")
+          .attr("id", "scatter-x-axis-lines")
+          .attr("transform", "translate(0," + (innerHeight) + ")")
+          .call(xaxis)
+          .append("text")
+          .attr("transform", "translate(" + (innerWidth/2) + "," + "30)")
+          .text( variables_formatted[ independent_variable ] );
+
+      svg.append("g")
+          .attr("class", "axis")
+          .attr("id", "scatter-y-axis-lines")
+          .call(yaxis)
+          .append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("dy", "-5em")
+          .attr("x", -height/6)
+          .text( variables_formatted[ dependent_variable ] );
+
+      //----------------------------SCATTER-----------------------------//
+      const scatter_container = svg.append("g").attr("id", "scatter-dots");
+      scatter_container.selectAll("dot")
+        .data( monthly_vax_sentiment_emotion_data ).enter().append("circle")
+        .attr("r", 1.0)
+        .attr("cx", d => { return xScale( d[ variables[independent_variable] ] ) })
+        .attr("cy", d => { return yScale( d[ variables[dependent_variable] ] ) })
+        .style("fill", "red")
+    }
+
+    function eraseScatterPlot() {
+      d3.select("#scatter-dots").remove();
+      d3.select("#scatter-y-axis-lines").remove();
+      d3.select("#scatter-x-axis-lines").remove();
+    }
+
+    // Read CSV file and cast to appropriate data types
+    d3.dsv(",", pathToCsv, d => {
+      var out = {}
+      for ( let i = 0; i < variables.length; ++i )
+        out[ variables[i] ] = parseFloat( d[ variables[i] ] )
+      out[ "Year" ] = parseInt( out["Year"] );
+      out[ "Month" ] = parseInt( out["Month"] );
+      return out;
+    }).then( (data) => {
+      monthly_vax_sentiment_emotion_data = data;
+      drawScatterPlot();
+    }).catch( (error) => {
+      console.log(error);
+    });
+
+
+  </script>
+
+</body>

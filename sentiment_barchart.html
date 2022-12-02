@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+
+<!-- To view in browser: python3 -m http.server 8080 & -->
+<!-- Then visit http://0.0.0.0:8080/interactive.html in your browser -->
+<head>
+  <meta charset="utf-8">
+  <!-- define CSS rules -->
+  <style>
+    .axis text {
+      fill: black;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Library Imports -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@5"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+
+  <!-- UI Elements to select a variable to view across time, then slice by sentiment -->
+  <fieldset name="sentiment_checkboxes">
+    <label>Sentiment: </label>
+    <input type="checkbox" id="positive_checkbox" name="positive_check" checked="True">
+    <label for="positive_check">Positive</label>
+    <input type="checkbox" id="negative_checkbox" name="negative_check" checked="True">
+    <label for="negative_check">Negative</label>
+    <input type="checkbox" id="neutral_checkbox" name="neutral_check" checked="True">
+    <label for="neutral_check">Neutral</label>
+    <br/>
+    <br/>
+    <label> Variable: </label>
+    <select id="statistics_selector">
+      <option value="0">Number of Tweets</option>
+      <option value="1">Number of Sensitive Tweets</option>
+      <option value="2">Number of Likes</option>
+      <option value="3">Number of Retweets</option>
+    </select>
+  </fieldset>
+
+  <!-- D3 -->
+  <script>
+    // define the dimensions and margins for the line chart
+    // Use the same Margin Convention from HW1 Q3: https://poloclub.github.io/cse6242-2022spring-online/hw1/8rEHLaYmr9 _margin_convention.pdf to layout your graph
+    const width = 960;
+    const height = 500;
+    const margin = {top: 20, right: 10, bottom: 20, left: 10};
+    const padding = 70;
+    const innerWidth = width - margin.left - margin.right - 2*padding;
+    const innerHeight = height - margin.top - margin.bottom - 2*padding;
+    // Variables we support
+    const statistics = [ '', 'is_sensitive', 'likes_count', 'retweet_count' ];
+    const statistics_formatted = [ 'Number of Tweets', "Number of Sensitive Tweets", "Number of Likes", "Number of Retweets" ];
+    var sentiment_display = { neg: true, neu: true, pos: true };
+    var statistic_display = 0;
+
+    // append svg element to the body of the page
+    // set dimensions and position of the svg element
+    let svg = d3
+      .select("body")
+      .append("svg")
+      .attr("id", "line_chart")
+      .attr("width", width)
+      .attr("height", height)
+      .append("g")
+      .attr("id", "container")
+      .attr("width", innerWidth )
+      .attr("height", innerHeight)
+      .attr("transform",
+        "translate(" + (margin.left+padding) + "," + margin.top + ")");
+
+    var neu_check = d3.select("#positive_checkbox");
+    var pos_check = d3.select("#negative_checkbox");
+    var neg_check = d3.select("#neutral_checkbox");
+    var statistics_selector = d3.select("#statistics_selector");
+    neu_check.on("change", updateSentiment);
+    pos_check.on("change", updateSentiment);
+    neg_check.on("change", updateSentiment);
+    statistics_selector.on("change", updateSentimentStatistic);
+    
+    // Fetch the data
+    var pathToCsv = "data_with_sentiment_and_emotion.csv";
+    var sentiment_and_emotion_data;
+
+    function updateSentimentStatistic() {
+      eraseSentimentHistogram();
+      statistic_display = parseInt( d3.select(this).property("value") );
+      drawSentimentHistogram( sentiment_and_emotion_data );
+    }
+
+    function updateSentiment() {
+      eraseSentimentHistogram();
+      sentiment_display.neg = neg_check.property("checked");
+      sentiment_display.pos = pos_check.property("checked");
+      sentiment_display.neu = neu_check.property("checked");
+      // Filters for data whose sentiment matches user preference
+      let filtered_data = sentiment_and_emotion_data.filter( (d, i) => { 
+        return ( sentiment_display.neg && d.sentiment_type === '-' ) || 
+          ( sentiment_display.pos && d.sentiment_type === '+' ) ||
+          ( sentiment_display.neu && d.sentiment_type === '0' );
+      });
+      drawSentimentHistogram( filtered_data );
+    }
+
+    function drawSentimentHistogram(data) {
+      // Scaling
+      number_of_bins = Math.sqrt( data.length );
+      const xScale = d3.scaleLinear().range([0,innerWidth]);
+      xScale.domain( d3.extent( data, d => d3.timeWeek( d.created_at ) ) );
+      var histogramify = d3.histogram()
+        .value( d => d3.timeWeek( d.created_at ) )
+        .domain( xScale.domain() )
+        .thresholds( xScale.ticks( number_of_bins ) )
+      var histogram_raw = histogramify( data )
+      var histogram;
+      // Change Summary statistics with variables
+      if ( statistic_display == 0 )
+        histogram = histogram_raw.map( e => { return { 'x0': e.x0, 'x1': e.x1, 'y': e.length }; } );
+      else
+        histogram = histogram_raw.map( e => { 
+          return { 'x0': e.x0, 'x1': e.x1, 'y': d3.sum( e, i => i[ statistics[statistic_display] ] ) };
+        });
+      const yScale = d3.scaleLinear().rangeRound([innerHeight, 0]);
+      yScale.domain( [ 0, d3.max( histogram, h => h.y ) ] );
+
+      //-----------------------------AXES-----------------------------//
+      const yaxis = d3.axisLeft()
+          .ticks(20)
+          .scale(yScale);
+
+      const xaxis = d3.axisBottom()
+          .ticks(20)
+          .tickFormat( d3.timeFormat("%m-%y") )
+          .scale(xScale);
+
+      svg.append("g")
+          .attr("class", "axis")
+          .attr("id", "sentiment-x-axis-lines")
+          .attr("transform", "translate(0," + (innerHeight) + ")")
+          .call(xaxis)
+          .append("text")
+          .attr("transform", "translate(" + (innerWidth/2) + "," + "30)")
+          .text("Time");
+
+      svg.append("g")
+          .attr("class", "axis")
+          .attr("id", "sentiment-y-axis-lines")
+          .call(yaxis)
+          .append("text")
+          .attr("transform", "rotate(-90)")
+          .attr("dy", "-5em")
+          .attr("x", -height/4)
+          .text( statistics_formatted[ statistic_display ] );
+
+      //----------------------------LINES-----------------------------//
+      const sentiment_histogram_container = svg.append("g").attr("id", "sentiment-histogram");
+      sentiment_histogram_container.selectAll("rect").data(histogram).enter().append("rect")
+        .attr("x", 1)
+        .attr("transform", d => { return "translate(" + xScale(d.x0) + "," + yScale(d.y) + ")"; })
+        .attr("width", d => { return 5. * (xScale(d.x1) - xScale(d.x0) - 1); })
+        .attr("height", d => { return innerHeight - yScale(d.y); })
+        .style("fill", "red")
+    }
+
+    function eraseSentimentHistogram() {
+      d3.select("#sentiment-histogram").remove();
+      d3.select("#sentiment-y-axis-lines").remove();
+      d3.select("#sentiment-x-axis-lines").remove();
+    }
+
+    // Read from CSV and cast to appropriate data types
+    d3.dsv(",", pathToCsv, (d) => {
+      let neg = parseFloat( d['neg'] );
+      let neu = parseFloat( d['neu'] );
+      let pos = parseFloat( d['pos'] );
+      let sentiment_type = '0';
+      // Classify tweet as positive if positivity outweighs negativity. If tie, then neutral
+      if ( pos > neg )
+        sentiment_type = '+';
+      else if ( pos < neg )
+        sentiment_type = '-';
+      return {
+        tweet_id: d['tweet_id'],
+        created_at: d3.isoParse( d['created_at'] ),
+        retweet_count: parseInt( d['retweet_count'] ),
+        likes_count: parseInt( d['likes_count'] ),
+        quote_count: parseInt( d['quote_count'] ),
+        is_sensitive: d['is_sensitive'] === "True" ? 1 : 0,
+        sentiment_type: sentiment_type
+      }
+    }).then( (data) => {
+      sentiment_and_emotion_data = data;
+      drawSentimentHistogram( sentiment_and_emotion_data );
+    }).catch( (error) => {
+      console.log(error);
+    });
+
+
+  </script>
+
+</body>
