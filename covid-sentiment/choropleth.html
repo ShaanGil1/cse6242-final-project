@@ -37,6 +37,7 @@ var svg=d3
 	.attr("height",height + margin.top + margin.right)
 	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+var curState = "Alabama"
 
 var statemapping = {
     "AL": "Alabama",
@@ -163,6 +164,14 @@ function onchange() {
 	  .remove();
 	d3.selectAll(".tooltip")
 	.remove();
+	d3.selectAll(".first_dose_text")
+	.remove();
+	d3.selectAll(".first_dose_value")
+	.remove();
+	d3.selectAll(".first_dose_circle")
+	  	.remove();
+
+	console.log(curState)
 	year = d3.timeFormat('%Y')(sliderTime.value());
 	month = sliderTime.value().getMonth()
 	createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, month);
@@ -177,8 +186,6 @@ var gTime = d3
 	.attr('transform', 'translate(40,40)');
 
 gTime.call(sliderTime);
-
-
 
 
 
@@ -222,10 +229,33 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 		if (d.Year==year && d.Month==month + 1) {
 			if (!(statemapping[d.state] in sentimentValuesWeekly)) {
 				sentimentValuesWeekly[statemapping[d.state]] = {}
+				sentimentValuesWeekly[statemapping[d.state]]["positive"] = []
+			sentimentValuesWeekly[statemapping[d.state]]["negative"] = []
+			sentimentValuesWeekly[statemapping[d.state]]["Happy"] = []
+			sentimentValuesWeekly[statemapping[d.state]]["Angry"] = []
+			sentimentValuesWeekly[statemapping[d.state]]["Surprise"] = []
+			sentimentValuesWeekly[statemapping[d.state]]["Sad"] = []
+			sentimentValuesWeekly[statemapping[d.state]]["Fear"] = []
+			sentimentValuesWeekly[statemapping[d.state]]["Dose1"] = []
+			sentimentValuesWeekly[statemapping[d.state]]["FinalDose"] = []
+			sentimentValuesWeekly[statemapping[d.state]]["AddDose2"] = [] 
 			}
+			sentimentValuesWeekly[statemapping[d.state]]["positive"].push(d.pos)
+			sentimentValuesWeekly[statemapping[d.state]]["negative"].push(d.neg)
+			sentimentValuesWeekly[statemapping[d.state]]["Happy"].push(d.Happy)
+			sentimentValuesWeekly[statemapping[d.state]]["Angry"].push(d.Angry)
+			sentimentValuesWeekly[statemapping[d.state]]["Surprise"].push(d.Surprise)
+			sentimentValuesWeekly[statemapping[d.state]]["Sad"].push(d.Sad)
+			sentimentValuesWeekly[statemapping[d.state]]["Fear"].push(d.Fear)
+			sentimentValuesWeekly[statemapping[d.state]]["Dose1"].push(d.Administered_Dose1_Pop_Pct) 
+			sentimentValuesWeekly[statemapping[d.state]]["FinalDose"].push(d.Series_Complete_Pop_Pct)
+			sentimentValuesWeekly[statemapping[d.state]]["AddDose2"].push(d.Additional_Doses_Vax_Pct)
 			sentimentValuesWeekly[statemapping[d.state]][d.Week] = [statemapping[d.state], d.neg, d.neu, d.pos, d.Happy, d.Angry, d.Surprise, d.Sad, d.Fear, d.Administered_Dose1_Pop_Pct, d.Series_Complete_Pop_Pct, d.Additional_Doses_Vax_Pct]
 		}
 	})
+	newSentimentValuesOrganized = {}
+
+	sentimentValuesWeekly
 
 
 
@@ -240,23 +270,23 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 				return "<strong style='color:green'>State: </strong><span style='color:white'>"+ d.properties.name + "</span><br>" +
 				"<strong style='color:green'>Month: </strong><span style='color:white'>" + monthmapping[month] +"</span><br>" +
 				"<strong style='color:green'>Year: </strong><span style='color:white'>" + year +"</span><br>"
-				+ "<strong style='color:green'>Happy Emotion Score: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][4] + "</span><br>"
-				+ "<strong style='color:green'>Angry Emotion Score: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][5] + "</span><br>"
-				+ "<strong style='color:green'>Surprise Emotion Score: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][6] + "</span><br>"
-				+ "<strong style='color:green'>Sad Emotion Score: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][7] + "</span><br>"
-				+ "<strong style='color:green'>Fear Emotion Score: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][8] + "</span><br>"
-				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][9] + "</span><br>"
-				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][10] + "</span><br>"
+				+ "<strong style='color:green'>Happy Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][4] * 1000) / 1000  + "</span><br>"
+				+ "<strong style='color:green'>Angry Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][5] * 1000) / 1000  + "</span><br>"
+				+ "<strong style='color:green'>Surprise Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][6] * 1000) / 1000  + "</span><br>"
+				+ "<strong style='color:green'>Sad Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][7] * 1000) / 1000  + "</span><br>"
+				+ "<strong style='color:green'>Fear Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][8] * 1000) / 1000  + "</span><br>"
+				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][9] * 1000) / 1000  + "</span><br>"
+				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "</span><br>"
 
 			} else {
 
 				return "<strong style='color:green'>State: </strong><span style='color:white'>"+ d.properties.name + "</span><br>" +
 				"<strong style='color:green'>Month: </strong><span style='color:white'>" + monthmapping[month] +"</span><br>" +
 				"<strong style='color:green'>Year: </strong><span style='color:white'>" + year +"</span><br>"
-				+ "<strong style='color:green'>Positive Sentiment Score: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][3] + "</span><br>"
-				+ "<strong style='color:green'>Negative Sentiment Score: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][1] + "</span><br>"
-				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][9] + "</span><br>"
-				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + tooltipInfo[d.properties.name][10] + "</span><br>"
+				+ "<strong style='color:green'>Positive Sentiment Score: </strong><span style='color:white'>" +Math.round(tooltipInfo[d.properties.name][3] * 1000) / 1000 + "</span><br>"
+				+ "<strong style='color:green'>Negative Sentiment Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][1] * 1000) / 1000 + "</span><br>"
+				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][9] * 1000) / 1000  + "</span><br>"
+				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "</span><br>"
 
 			}
 			
@@ -283,15 +313,70 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 			states_10m.objects.states).features
 		)
 		.enter().append("path")
-		.attr("fill", function(d) {=
+		.attr("fill", function(d) {
 			return linear(sentimentValues[d.properties.name])
 		})
 		.attr("stroke", "#000")
 		.attr("d", path)
 		.on('mouseover', tip.show)
-		.on('mouseout', tip.hide);
+		.on('mouseout', tip.hide)
+		.on("click", clicked);
 	
 	map.call(tip);
+
+	function clicked() {
+		d3.selectAll(".first_dose_text")
+	  	.remove();
+		  d3.selectAll(".first_dose_value")
+	  	.remove();
+		  d3.selectAll(".first_dose_circle")
+	  	.remove();
+		var data = this.__data__;
+		curState = data.properties.name
+		// console.log(data)
+		// console.log(data.properties.name)
+		// console.log(sentimentValuesWeekly[data.properties.name])
+		// var statedata = sentimentValuesWeekly[data.properties.name]
+		addState(data.properties.name)
+		// var statedata = tooltipInfo[data.properties.name]
+		// console.log(tooltipInfo)
+		// console.log(statedata[9])
+		// console.log(parseFloat(statedata[9]))
+
+		// svg
+		// .append("circle")
+		// .attr("class", "first_dose_circle")
+        // .style("fill",function(d){
+        //     return "green"
+        //   })
+        //   .attr("r", parseFloat(statedata[9]))
+        //   .attr("cx", function(d){return 500})
+        //   .attr("cy", function(d){return 700})
+		
+		// svg.append("text").attr("class", "first_dose_text").text("First Dose Percentage").attr("transform", "translate(430,600)").style("font-size", "20px");
+		// svg.append("text").attr("class", "first_dose_value").text((Math.round(parseFloat(statedata[9]) * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(470,700)").style("font-size", "20px");
+	}
+
+	function addState(state) {
+		var statedata = tooltipInfo[state]
+		console.log(tooltipInfo)
+		console.log(statedata[9])
+		console.log(parseFloat(statedata[9]))
+
+		svg
+		.append("circle")
+		.attr("class", "first_dose_circle")
+        .style("fill",function(d){
+            return "green"
+          })
+          .attr("r", parseFloat(statedata[9]))
+          .attr("cx", function(d){return 500})
+          .attr("cy", function(d){return 700})
+		
+		svg.append("text").attr("class", "first_dose_text").text("First Dose Percentage for "+ state).attr("transform", "translate(400,600)").style("font-size", "20px");
+		svg.append("text").attr("class", "first_dose_value").text((Math.round(parseFloat(statedata[9]) * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(470,700)").style("font-size", "20px");
+
+	}
 
 	if (useEmotion) {
 		var linear2 = d3.scaleOrdinal()
