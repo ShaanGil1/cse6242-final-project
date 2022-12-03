@@ -17,6 +17,10 @@
 	<div id = "out">
 		<p id="label">Month/Year</p>
 		<div id="choropleth"></div>
+		<div>
+			<input id="sentiment_radio" type="radio" name="choropleth-type" value="sentiment" > Sentiment Choropleth<br>
+			<input id="emotion_radio" type="radio" name="choropleth-type" value="emotion" checked="checked"> Emotion Choropleth<br>
+		</div>
 	</div>
 <script>
 
@@ -25,7 +29,6 @@ var margin = {top: 80,right: 40,bottom: 100,left: 40}
         var width = 1200 - margin.left - margin.right
         var height = 900 - margin.top - margin.bottom;
 
-var colorScheme = d3.schemeBlues[8];
 
 var svg=d3
 	.select("body")
@@ -33,7 +36,6 @@ var svg=d3
 	.attr("width", width + margin.right + margin.left)
 	.attr("height",height + margin.top + margin.right)
 	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
 
 
 var statemapping = {
@@ -128,7 +130,6 @@ var promises = [
 ]
 // month on x-axis
 var dataTime = d3.range(0, 23).map(function(d) {
-	console.log(d)
 	if (d < 12) {
 		console
 		return new Date(2021, d);
@@ -136,6 +137,12 @@ var dataTime = d3.range(0, 23).map(function(d) {
 		return new Date(2022, d - 12);
 	}	
 });
+
+var sentiment_radio = d3.select("#sentiment_radio");
+var emotion_radio = d3.select("#emotion_radio");
+
+sentiment_radio.on("change", onchange);
+emotion_radio.on("change", onchange);
 
 
 var sliderTime = d3
@@ -151,6 +158,7 @@ var sliderTime = d3
 	.on('onchange', onchange);
 
 function onchange() {
+	var useEmotion = emotion_radio.property("checked");
 	d3.selectAll(".states")
 	  .remove();
 	d3.selectAll(".tooltip")
@@ -170,12 +178,15 @@ var gTime = d3
 
 gTime.call(sliderTime);
 
-var useEmotion = false;
+
+
+
 
 Promise.all(promises).then(function(array) {
 	states_10m = array[0];
 	covid_info = array[1];
 	covid_info_weekly = array[2]
+	var useEmotion = emotion_radio.property("checked");
 	createMap(states_10m, covid_info, covid_info_weekly, useEmotion, 2021, 0);
 });
 
@@ -193,12 +204,13 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 	covid_info.forEach(function(d) {
 		if (d.Year==year && d.Month==month + 1) {
 			if (useEmotion) {
-			sentimentValues[statemapping[d.state]] = argMax([d.Happy, d.Angry, d.Surprise, d.Sad, d.Fear]) //Happy,Angry,Surprise,Sad,Fear
+				sentimentValues[statemapping[d.state]] = argMax([d.Happy, d.Angry, d.Surprise, d.Sad, d.Fear]) //Happy,Angry,Surprise,Sad,Fear
 			} else {
 				sentimentValues[statemapping[d.state]] = argMax([d.neg, d.pos])
 			}
 		}
 	})
+	console.log(sentimentValues)
 
 	covid_info.forEach(function(d) {
 		if (d.Year==year && d.Month==month + 1) {
@@ -214,7 +226,6 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 			sentimentValuesWeekly[statemapping[d.state]][d.Week] = [statemapping[d.state], d.neg, d.neu, d.pos, d.Happy, d.Angry, d.Surprise, d.Sad, d.Fear, d.Administered_Dose1_Pop_Pct, d.Series_Complete_Pop_Pct, d.Additional_Doses_Vax_Pct]
 		}
 	})
-	// console.log(sentimentValuesWeekly)
 
 
 
@@ -252,21 +263,16 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 		});
 
 
-
 	if (useEmotion) {
 		var linear = d3.scaleOrdinal()
-			.domain(["0", "1", "2", "3", "4"])
-			.range(["#800080", "#FFFF00", "90EE90", "#0A1172", "E3242B"])
+			.domain([0,1,2,3,4])
+			.range(["#800080", "#FFFF00", "#90EE90", "#0A1172", "#FFC0CB"])
 
 	} else {
 		var linear = d3.scaleOrdinal()
 			.domain(["0", "1"])
 			.range(["#FF0000", "#0000FF"])
 	}
-	
-
-	
-
 
 	var map = svg.append("g")
 		.attr("id", "states")
@@ -277,7 +283,7 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 			states_10m.objects.states).features
 		)
 		.enter().append("path")
-		.attr("fill", function(d) {
+		.attr("fill", function(d) {=
 			return linear(sentimentValues[d.properties.name])
 		})
 		.attr("stroke", "#000")
@@ -290,13 +296,12 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 	if (useEmotion) {
 		var linear2 = d3.scaleOrdinal()
 			.domain(["Happy","Angry","Surprise","Sad","Fear"])
-			.range(["#800080", "#FFFF00", "90EE90", "#0A1172", "E3242B"])
+			.range(["#800080", "#FFFF00", "#90EE90", "#0A1172", "#FFC0CB"])
 	} else {
 		var linear2 = d3.scaleOrdinal()
 		.domain(["Negative", "Positive"])
 		.range(["#FF0000", "#0000FF"])
 	}
-
 
 
 	var legendOut = svg.append("g")
