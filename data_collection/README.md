@@ -1,4 +1,5 @@
-Data_cleanup.ipynb requirements:
+Data_cleanup.ipynb
+Requirements:
 python==3.7
 jupyter==1.0.0
 numpy==1.19.1
