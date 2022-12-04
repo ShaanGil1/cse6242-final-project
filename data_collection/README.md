@@ -22,6 +22,22 @@ Select the time frame of data that needs to be gather by deleting data that does
 
 This file will pull the fields that we found relavant to our project however they can be adjusted if other fields need to be pulled.
 
+# emotional_analysis.ipynb
+### Description
+This notebook takes in twitter data and gives analyzes each tweet and gives an emotion score to each tweet.  It complies the results and outputs the dataset to a path designated by the user.
+
+### Installation
+Requirements: \
+python==3.7 \
+jupyter==1.0.0 \
+pandas==1.1.0 \
+nltk==3.7 \ 
+emoji==1.6.3 \
+text2emotion == 0.0.5
+
+### Execution
+The file is structured so that it takes in batches of tweets at a time adjust the batch number to match what you did (or run it all at once). Run all of the cell and make sure all of the import requirements are met.  The file will run and on the last cell block provide a file path that the output will be stored in.
+
 # Data_cleanup.ipynb
 ### Description
 This notebook is used to generate the .csv files necessary for our visualizations as well as some miscellanaeous files and data that was used for the experiments of the report.
