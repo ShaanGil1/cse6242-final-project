@@ -18,6 +18,8 @@ Select the time frame of data that needs to be gather by deleting data that does
 This file will pull the fields that we found relavant to our project however they can be adjusted if other fields need to be pulled.
 
 ### Data_cleanup.ipynb
+This notebook is used to generate the .csv files necessary for our visualizations as well as some miscellanaeous files and data that was used for the experiments of the report.
+
 Requirements: \
 python==3.7 \
 jupyter==1.0.0 \
