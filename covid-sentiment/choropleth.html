@@ -16,12 +16,14 @@
 
 	<div id = "out">
 		<h1 id = "title">Emotion/Sentiment by US State</h1>
-		<h4 id = "title">Click on the State to display visualized Vaccine Rates.</h1>
+		<h4 id = "title">Click on the State to display visualized Vaccine Rates difference from the previous month.</h1>
+		<h4 id = "title">The color of the Visualized Circle represents the Political Leaning of the State: Blue as Democrat and Red as Republican</h1>
+
 		<p id="label">Month/Year</p>
 		<div id="choropleth"></div>
 		<div>
-			<input id="sentiment_radio" type="radio" name="choropleth-type" value="sentiment" > Sentiment Choropleth<br>
-			<input id="emotion_radio" type="radio" name="choropleth-type" value="emotion" checked="checked"> Emotion Choropleth<br>
+			<input id="sentiment_radio" type="radio" name="choropleth-type" value="sentiment" checked="checked"> Sentiment Choropleth<br>
+			<input id="emotion_radio" type="radio" name="choropleth-type" value="emotion" > Emotion Choropleth<br>
 		</div>
 	</div>
 <script>
@@ -30,7 +32,6 @@
 var margin = {top: 150,right: 40,bottom: 100,left: 150}
         var width = 1200 - margin.left - margin.right
         var height = 900 - margin.top - margin.bottom;
-
 
 var svg=d3
 	.select("body")
@@ -118,7 +119,6 @@ var monthmapping = {
 	11: "December", 
 }
 
-
 var projection = d3.geoAlbersUsa()
 	.scale(800)
 	.translate([400, 200]);
@@ -128,13 +128,13 @@ var path = d3.geoPath()
 
 var promises = [
 	d3.json("states-10m.json"),
-	d3.csv("monthly_vax_sentiment_emotion.csv"),
-	d3.csv("high_like_tweets.csv")
+	d3.csv("monthly_vax_sentiment_emotion2.csv"),
+	d3.csv("high_like_tweets.csv"),
+	d3.csv("election_results.csv")
 ]
 // month on x-axis
 var dataTime = d3.range(0, 23).map(function(d) {
 	if (d < 12) {
-		console
 		return new Date(2021, d);
 	} else {
 		return new Date(2022, d - 12);
@@ -179,10 +179,9 @@ function onchange() {
 	d3.selectAll(".second_dose_circle")
 	  	.remove();
 
-	console.log(curState)
 	year = d3.timeFormat('%Y')(sliderTime.value());
 	month = sliderTime.value().getMonth()
-	createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, month);
+	createMap(states_10m, covid_info, high_like_tweet, election_results, useEmotion, year, month);
 } 
 
 var gTime = d3
@@ -200,19 +199,21 @@ Promise.all(promises).then(function(array) {
 	states_10m = array[0];
 	covid_info = array[1];
 	high_like_tweet = array[2]
+	election_results = array[3]
 	var useEmotion = emotion_radio.property("checked");
-	createMap(states_10m, covid_info, high_like_tweet, useEmotion, 2021, 0);
+	createMap(states_10m, covid_info, high_like_tweet, election_results, useEmotion, 2021, 0);
 });
 
 function argMax(array) {
   return array.map((x, i) => [x, i]).reduce((r, a) => (a[0] > r[0] ? a : r))[1];
 }
 
-function createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, month) {
-	var sentimentValues = {}
-	var emotionValues = {}
+function createMap(states_10m, covid_info, high_like_tweet, election_results, useEmotion, year, month) {
+	var sentimentValues = {};
+	var emotionValues = {};
 	var tooltipInfo = {};
-	var highLikeInfo = {}
+	var highLikeInfo = {};
+	var electionInfo = {};
 
 	covid_info.forEach(function(d) {
 		if (d.Year==year && d.Month==month + 1) {
@@ -226,7 +227,14 @@ function createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, mo
 
 	covid_info.forEach(function(d) {
 		if (d.Year==year && d.Month==month + 1) {
-			tooltipInfo[statemapping[d.state]] = [statemapping[d.state], d.neg, d.neu, d.pos, d.Happy, d.Angry, d.Surprise, d.Sad, d.Fear, d.Administered_Dose1_Pop_Pct, d.Series_Complete_Pop_Pct, d.Additional_Doses_Vax_Pct]
+			console.log(d)
+			var dose1diff = d.Dose1_diff
+			var dose2diff = d.Dose2_diff
+			if (year==2021 && d.Month==1) {
+				dose1diff = 0
+				dose2diff = 0
+			}
+			tooltipInfo[statemapping[d.state]] = [statemapping[d.state], d.neg, d.neu, d.pos, d.Happy, d.Angry, d.Surprise, d.Sad, d.Fear, d.Administered_Dose1_Pop_Pct, d.Series_Complete_Pop_Pct, d.Additional_Doses_Vax_Pct, dose1diff, dose2diff]
 		}
 	})
 
@@ -234,8 +242,19 @@ function createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, mo
 		if (d.Year == year && d.Month == month + 1 && !(statemapping[d.state] in highLikeInfo)) {
 			highLikeInfo[statemapping[d.state]] = [d.text, d.loc_name, d.state, d.likes_count]
 		}
-
 	})
+
+	election_results.forEach(function(d) {
+		var leaning = "";
+		// console.log(d.state)
+		if (d.called=="D") {
+			leaning = "Democrat"
+		} else {
+			leaning = "Republican"
+		}
+		electionInfo[d.state] = [leaning, d.dem_percent, d.rep_percent]
+	})
+	// console.log(tooltipInfo)
 
 
 
@@ -254,32 +273,36 @@ function createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, mo
 				+ "<strong style='color:green'>Angry Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][5] * 1000) / 1000  + "</span><br>"
 				+ "<strong style='color:green'>Surprise Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][6] * 1000) / 1000  + "</span><br>"
 				+ "<strong style='color:green'>Sad Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][7] * 1000) / 1000  + "</span><br>"
-				+ "<strong style='color:green'>Fear Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][8] * 1000) / 1000  + "</span><br>"
-				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][9] * 1000) / 1000  + "</span><br>"
-				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "</span><br>" + "<hr>"
+				+ "<strong style='color:green'>Fear Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][8] * 1000) / 1000  + "</span><br>"+ "<hr>"
+				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][9] * 1000) / 1000  + "%</span><br>"
+				+ "<strong style='color:green'>First Dose Rate Difference From Last Month: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][12] * 1000) / 1000  + "%</span><br>"
+				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "%</span><br>" 
+				+ "<strong style='color:green'>Second Dose Rate Difference From Last Month: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][13] * 1000) / 1000  + "%</span><br>"+ "<hr>"
+				+ "<strong style='color:green'>Political Leaning </strong><span style='color:white'>" + electionInfo[d.properties.name][0]  + "</span><br>" + "<hr>"
 				+ "<span style='color:white;'>Top Tweet:</span><br>"
-				// var tweetTextSplitted = highLikeInfo[d.properties.name][0].split(/,| /)
+
 				var stateData = highLikeInfo[d.properties.name]
 				var tweetTextSplitted = stateData[0].split(" ")
 				tweetTexts = []
 				for (var i = 0; i < tweetTextSplitted.length/10; i++) {
-					// tweetTexts.push(tweetTextSplitted.slice(i*10,i*10+10))
 					toRet+= "<span style='color:#ADD8E6; font-size:15px' >"+tweetTextSplitted.slice(i*10,i*10+10).join(" ")+"</span><br>"
 				}
 				toRet+= "<span style='color:white; font-size:15px'>City: "+stateData[1]+", "+stateData[2]+"</span><br>"
 				// toRet+= "<span style='color:white; font-size:15px'>"+stateData[3]+" likes</span><br>"
 				return toRet
-				
 
 			} else {
 
-				var toRet = "<strong style='color:green'>State: </strong><span style='color:white'>"+ d.properties.name + "</span><br>" +
+				var toRet = "<strong style='color:green'>State: </strong><span style='color:white'>" + d.properties.name + "</span><br>" +
 				"<strong style='color:green'>Month: </strong><span style='color:white'>" + monthmapping[month] +"</span><br>" +
 				"<strong style='color:green'>Year: </strong><span style='color:white'>" + year +"</span><br>"
 				+ "<strong style='color:green'>Positive Sentiment Score: </strong><span style='color:white'>" +Math.round(tooltipInfo[d.properties.name][3] * 1000) / 1000 + "</span><br>"
-				+ "<strong style='color:green'>Negative Sentiment Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][1] * 1000) / 1000 + "</span><br>"
-				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][9] * 1000) / 1000  + "</span><br>"
-				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "</span><br>" + "<hr>"
+				+ "<strong style='color:green'>Negative Sentiment Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][1] * 1000) / 1000 + "</span><br>"+ "<hr>"
+				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][9] * 1000) / 1000  + "%</span><br>"
+				+ "<strong style='color:green'>First Dose Rate Difference From Last Month: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][12] * 1000) / 1000  + "%</span><br>"
+				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "%</span><br>"
+				+ "<strong style='color:green'>Second Dose Rate Difference From Last Month: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][13] * 1000) / 1000  + "%</span><br>"+ "<hr>"
+				+ "<strong style='color:green'>Political Leaning </strong><span style='color:white'>" + electionInfo[d.properties.name][0]  + "</span><br>" + "<hr>"
 				+ "<span style='color:white;'>Top Tweet:</span><br>"
 
 				var stateData = highLikeInfo[d.properties.name]
@@ -305,7 +328,7 @@ function createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, mo
 	} else {
 		var linear = d3.scaleOrdinal()
 			.domain(["0", "1"])
-			.range(["#FF0000", "#0000FF"])
+			.range(["#FFCCCB", "#ADD8E6"])
 	}
 
 	var map = svg.append("g")
@@ -353,28 +376,52 @@ function createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, mo
 		.append("circle")
 		.attr("class", "first_dose_circle")
         .style("fill",function(d){
-            return "green"
+
+			if (electionInfo[state][0]=="Democrat") {
+				return '#0066FF'
+			} else {
+				return "red"
+			}
+            // return "green"
           })
-          .attr("r", parseFloat(statedata[9]))
-          .attr("cx", function(d){return 200})
+          .attr("r", parseFloat(statedata[12])*9)
+          .attr("cx", function(d){return 270})
           .attr("cy", function(d){return 700})
+
+		var firstDoseDiff = parseFloat(statedata[12])
+		var firstDoseDiffy = 700
+		if (firstDoseDiff<3.5) {
+			firstDoseDiffy = 700-30
+		}
+
 		
-		svg.append("text").attr("class", "first_dose_text").text("First Dose Percentage for "+ state).attr("transform", "translate(100,600)").style("font-size", "20px");
-		svg.append("text").attr("class", "first_dose_value").text((Math.round(parseFloat(statedata[9]) * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(170,700)").style("font-size", "20px");
+		svg.append("text").attr("class", "first_dose_text").text("First Dose Percentage Difference for "+ state).attr("transform", "translate(100,500)").style("font-size", "20px");
+		svg.append("text").attr("class", "first_dose_value").text((Math.round(firstDoseDiff * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(240,"+firstDoseDiffy+")").style("font-size", "20px");
 
 
 		svg
 		.append("circle")
 		.attr("class", "second_dose_circle")
         .style("fill",function(d){
-            return "green"
+            if (electionInfo[state][0]=="Democrat") {
+				return '#0066FF'
+			} else {
+				return "red"
+			}
           })
-          .attr("r", parseFloat(statedata[10]))
-          .attr("cx", function(d){return 600})
+          .attr("r", parseFloat(statedata[13])*9)
+          .attr("cx", function(d){return 670})
           .attr("cy", function(d){return 700})
+
 		
-		svg.append("text").attr("class", "second_dose_text").text("Second Dose Percentage for "+ state).attr("transform", "translate(500,600)").style("font-size", "20px");
-		svg.append("text").attr("class", "second_dose_value").text((Math.round(parseFloat(statedata[10]) * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(570,700)").style("font-size", "20px");
+		var secondDoseDiff = parseFloat(statedata[13])
+		var secondDoseDiffy = 700
+		if (secondDoseDiff<3.5) {
+			secondDoseDiffy = 700-30
+		}
+		
+		svg.append("text").attr("class", "second_dose_text").text("Second Dose Percentage Difference for "+ state).attr("transform", "translate(550,500)").style("font-size", "20px");
+		svg.append("text").attr("class", "second_dose_value").text((Math.round(secondDoseDiff * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(640,"+secondDoseDiffy+")").style("font-size", "20px");
 
 	}
 
@@ -385,7 +432,7 @@ function createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, mo
 	} else {
 		var linear2 = d3.scaleOrdinal()
 		.domain(["Negative", "Positive"])
-		.range(["#FF0000", "#0000FF"])
+		.range(["#FFCCCB", "#ADD8E6"])
 	}
 
 
