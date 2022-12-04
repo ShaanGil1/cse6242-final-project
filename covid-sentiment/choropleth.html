@@ -15,6 +15,8 @@
 	<script src="../lib/d3-legend.min.js"></script>
 
 	<div id = "out">
+		<h1 id = "title">Emotion/Sentiment by US State</h1>
+		<h4 id = "title">Click on the State to display visualized Vaccine Rates.</h1>
 		<p id="label">Month/Year</p>
 		<div id="choropleth"></div>
 		<div>
@@ -169,6 +171,13 @@ function onchange() {
 	.remove();
 	d3.selectAll(".first_dose_circle")
 	  	.remove();
+	
+	d3.selectAll(".second_dose_text")
+	.remove();
+	d3.selectAll(".second_dose_value")
+	.remove();
+	d3.selectAll(".second_dose_circle")
+	  	.remove();
 
 	console.log(curState)
 	year = d3.timeFormat('%Y')(sliderTime.value());
@@ -227,8 +236,6 @@ function createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, mo
 		}
 
 	})
-
-
 
 
 
