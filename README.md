@@ -6,10 +6,16 @@ All data collection information is contained in data_collection folder and its R
 
 
 ## Description
-### emotion_barchart.html
+### sentiment_barchart.html
 1. Bar chart of relevant data against time. Segmented by sentiment. Use the selector to choose variable to examine out of "Number of tweets", "Number of sensitive tweets", "Likes" and "Retweets". Choose check boxes to filter out positive, negative and neutral tweets. Data aggregated weekly
-2. Bar chart of relevant data against time. Segmented by emotion. Use the selector to choose relevant variables outs of "Number of Tweets", "Number of Sensitive Tweets", "Likes" and "Retweets". Choose check boxes to filter by "Fear", "Surprise", "Happy", "Anger" and others. Data aggregated weekly
-3. Scatter plots of columns. Choose independent and dependent variables from lists of date, sentiments, emotions and vaccination status. Each circle represents one tweet.
+
+
+### emotion_barchart.html
+1. Bar chart of relevant data against time. Segmented by emotion. Use the selector to choose relevant variables outs of "Number of Tweets", "Number of Sensitive Tweets", "Likes" and "Retweets". Choose check boxes to filter by "Fear", "Surprise", "Happy", "Anger" and others. Data aggregated weekly
+
+### scatterplot.html
+1. Scatter plots of columns. Choose independent and dependent variables from lists of date, sentiments, emotions and vaccination status. Each circle represents one tweet. This shows the relationships from different data we collected.
+
 All plots built with D3, JavaScript, HTML and CSS. Tested with data sampled from Twitter API. Please see https://observablehq.com/@d3/histogram and https://observablehq.com/@d3/scatterplot from the creators of D3 for more information
 
 ### choropleth.html
@@ -27,11 +33,13 @@ All bar charts and Scatter plots require JavaScript, HTML, CSS and Python in ord
 ## Execution
 Run a Python http server `python -m http.server 8000` in the root folder
 
-To view the Choropleth, navigate to choropleth.html at localhost:8000 on your web browser in the choropleth folder. Ensure the final.css, election_results.csv, high_like_tweets.csv, and monthly_vax_sentiment_emotion2.csv exists in this folder!
+To view the Choropleth, navigate to `choropleth.html` at localhost:8000 on your web browser in the choropleth folder. Ensure the `final.css`, `election_results.csv`, `high_like_tweets.csv`, and `monthly_vax_sentiment_emotion2.csv` exists in this folder!
 
-To view the bar charts, navigate to emotion_barchart.html at localhost:8000 in this root folder.
-Ensure the data_with_sentiment_and_emotion.csv file exists in the root folder.
+To view the bar charts, navigate to `emotion_barchart.html` or `sentiment_barchart.html` at localhost:8000 in this root folder.
+Ensure the `data_with_sentiment_and_emotion.csv` file exists in the root folder.
 
+To view the scatterplot, navigate to `scatterplot.html` at localhost:8000 in this root folder.
+Ensure the `monthly_vax_sentiment_emotion.csv` file exists in the root folder.
 
 
 
