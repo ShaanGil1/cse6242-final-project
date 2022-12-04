@@ -30,7 +30,7 @@ This notebook takes in twitter data and gives analyzes each tweet and gives an e
 Requirements: \
 python==3.7 \
 jupyter==1.0.0 \
-pandas==1.1.0 \
+pandas==1.1.0\
 nltk==3.7\ 
 emoji==1.6.3 \
 text2emotion == 0.0.5
