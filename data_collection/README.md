@@ -1,10 +1,15 @@
-### data_retrieval.ipynb
+# data_retrieval.ipynb
+### Description
+This notebook pulls data from a github repo and compiles the data and filters by if location data is present.  It then uses the compiled data to make batched twitter API calls to retrieve the relevant fields for this project and saves all this data into a file. 
+
+### Installation
 Requirements: \
 python==3.7 \
 jupyter==1.0.0 \
 pandas==1.1.0 \
 tweetpy==(most recent version)
 
+### Execution
 Run all the import cells to make sure you have the all needed packages. And copy paste personal twitter keys into appropriate cell block.\
 Clone the following github repo:\
 https://github.com/shaypal5/awesome-twitter-data
