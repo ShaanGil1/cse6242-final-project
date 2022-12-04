@@ -6,7 +6,7 @@ numpy==1.19.1 \
 pandas==1.1.0 
 
 All sections (marked by v# in the first cell) can be run by running the import cell at the top then running the cells 1 by 1, assuming you have the necessary .csv file from the cdc website:\
-https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-Jurisdi/unsk-b7fc/data \
+https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-Jurisdi/unsk-b7fc/data 
 
 our google drive:\
 https://drive.google.com/drive/folders/1jmqrrgiNyqUFemB4LCvO1LK7Uyl2nnd-?usp=share_link 
