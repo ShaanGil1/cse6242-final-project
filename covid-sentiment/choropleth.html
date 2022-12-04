@@ -25,7 +25,7 @@
 <script>
 
 
-var margin = {top: 80,right: 40,bottom: 100,left: 40}
+var margin = {top: 150,right: 40,bottom: 100,left: 150}
         var width = 1200 - margin.left - margin.right
         var height = 900 - margin.top - margin.bottom;
 
@@ -127,7 +127,7 @@ var path = d3.geoPath()
 var promises = [
 	d3.json("states-10m.json"),
 	d3.csv("monthly_vax_sentiment_emotion.csv"),
-	d3.csv("weekly_vax_sentiment_emotion.csv")
+	d3.csv("high_like_tweets.csv")
 ]
 // month on x-axis
 var dataTime = d3.range(0, 23).map(function(d) {
@@ -150,7 +150,6 @@ var sliderTime = d3
 	.sliderBottom()
 	.min(new Date(2021, 0))
 	.max(new Date(2022, 11))
-	// .step(1000 * 60 * 60 * 24 * 365 / 12)
 	.marks(dataTime)
 	.width(900)
 	.tickFormat(d3.timeFormat("%b %y"))
@@ -174,7 +173,7 @@ function onchange() {
 	console.log(curState)
 	year = d3.timeFormat('%Y')(sliderTime.value());
 	month = sliderTime.value().getMonth()
-	createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, month);
+	createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, month);
 } 
 
 var gTime = d3
@@ -188,25 +187,23 @@ var gTime = d3
 gTime.call(sliderTime);
 
 
-
 Promise.all(promises).then(function(array) {
 	states_10m = array[0];
 	covid_info = array[1];
-	covid_info_weekly = array[2]
+	high_like_tweet = array[2]
 	var useEmotion = emotion_radio.property("checked");
-	createMap(states_10m, covid_info, covid_info_weekly, useEmotion, 2021, 0);
+	createMap(states_10m, covid_info, high_like_tweet, useEmotion, 2021, 0);
 });
 
 function argMax(array) {
   return array.map((x, i) => [x, i]).reduce((r, a) => (a[0] > r[0] ? a : r))[1];
 }
 
-function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, month) {
+function createMap(states_10m, covid_info, high_like_tweet, useEmotion, year, month) {
 	var sentimentValues = {}
 	var emotionValues = {}
 	var tooltipInfo = {};
-	var sentimentValuesWeekly = {};
-	
+	var highLikeInfo = {}
 
 	covid_info.forEach(function(d) {
 		if (d.Year==year && d.Month==month + 1) {
@@ -217,7 +214,6 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 			}
 		}
 	})
-	console.log(sentimentValues)
 
 	covid_info.forEach(function(d) {
 		if (d.Year==year && d.Month==month + 1) {
@@ -225,37 +221,14 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 		}
 	})
 
-	covid_info_weekly.forEach(function(d) {
-		if (d.Year==year && d.Month==month + 1) {
-			if (!(statemapping[d.state] in sentimentValuesWeekly)) {
-				sentimentValuesWeekly[statemapping[d.state]] = {}
-				sentimentValuesWeekly[statemapping[d.state]]["positive"] = []
-			sentimentValuesWeekly[statemapping[d.state]]["negative"] = []
-			sentimentValuesWeekly[statemapping[d.state]]["Happy"] = []
-			sentimentValuesWeekly[statemapping[d.state]]["Angry"] = []
-			sentimentValuesWeekly[statemapping[d.state]]["Surprise"] = []
-			sentimentValuesWeekly[statemapping[d.state]]["Sad"] = []
-			sentimentValuesWeekly[statemapping[d.state]]["Fear"] = []
-			sentimentValuesWeekly[statemapping[d.state]]["Dose1"] = []
-			sentimentValuesWeekly[statemapping[d.state]]["FinalDose"] = []
-			sentimentValuesWeekly[statemapping[d.state]]["AddDose2"] = [] 
-			}
-			sentimentValuesWeekly[statemapping[d.state]]["positive"].push(d.pos)
-			sentimentValuesWeekly[statemapping[d.state]]["negative"].push(d.neg)
-			sentimentValuesWeekly[statemapping[d.state]]["Happy"].push(d.Happy)
-			sentimentValuesWeekly[statemapping[d.state]]["Angry"].push(d.Angry)
-			sentimentValuesWeekly[statemapping[d.state]]["Surprise"].push(d.Surprise)
-			sentimentValuesWeekly[statemapping[d.state]]["Sad"].push(d.Sad)
-			sentimentValuesWeekly[statemapping[d.state]]["Fear"].push(d.Fear)
-			sentimentValuesWeekly[statemapping[d.state]]["Dose1"].push(d.Administered_Dose1_Pop_Pct) 
-			sentimentValuesWeekly[statemapping[d.state]]["FinalDose"].push(d.Series_Complete_Pop_Pct)
-			sentimentValuesWeekly[statemapping[d.state]]["AddDose2"].push(d.Additional_Doses_Vax_Pct)
-			sentimentValuesWeekly[statemapping[d.state]][d.Week] = [statemapping[d.state], d.neg, d.neu, d.pos, d.Happy, d.Angry, d.Surprise, d.Sad, d.Fear, d.Administered_Dose1_Pop_Pct, d.Series_Complete_Pop_Pct, d.Additional_Doses_Vax_Pct]
+	high_like_tweet.forEach(function(d) {
+		if (d.Year == year && d.Month == month + 1 && !(statemapping[d.state] in highLikeInfo)) {
+			highLikeInfo[statemapping[d.state]] = [d.text, d.loc_name, d.state, d.likes_count]
 		}
-	})
-	newSentimentValuesOrganized = {}
 
-	sentimentValuesWeekly
+	})
+
+
 
 
 
@@ -267,7 +240,7 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 
 			if (useEmotion) {
 
-				return "<strong style='color:green'>State: </strong><span style='color:white'>"+ d.properties.name + "</span><br>" +
+				var toRet = "<strong style='color:green'>State: </strong><span style='color:white'>"+ d.properties.name + "</span><br>" +
 				"<strong style='color:green'>Month: </strong><span style='color:white'>" + monthmapping[month] +"</span><br>" +
 				"<strong style='color:green'>Year: </strong><span style='color:white'>" + year +"</span><br>"
 				+ "<strong style='color:green'>Happy Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][4] * 1000) / 1000  + "</span><br>"
@@ -276,18 +249,42 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 				+ "<strong style='color:green'>Sad Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][7] * 1000) / 1000  + "</span><br>"
 				+ "<strong style='color:green'>Fear Emotion Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][8] * 1000) / 1000  + "</span><br>"
 				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][9] * 1000) / 1000  + "</span><br>"
-				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "</span><br>"
+				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "</span><br>" + "<hr>"
+				+ "<span style='color:white;'>Top Tweet:</span><br>"
+				// var tweetTextSplitted = highLikeInfo[d.properties.name][0].split(/,| /)
+				var stateData = highLikeInfo[d.properties.name]
+				var tweetTextSplitted = stateData[0].split(" ")
+				tweetTexts = []
+				for (var i = 0; i < tweetTextSplitted.length/10; i++) {
+					// tweetTexts.push(tweetTextSplitted.slice(i*10,i*10+10))
+					toRet+= "<span style='color:#ADD8E6; font-size:15px' >"+tweetTextSplitted.slice(i*10,i*10+10).join(" ")+"</span><br>"
+				}
+				toRet+= "<span style='color:white; font-size:15px'>City: "+stateData[1]+", "+stateData[2]+"</span><br>"
+				// toRet+= "<span style='color:white; font-size:15px'>"+stateData[3]+" likes</span><br>"
+				return toRet
+				
 
 			} else {
 
-				return "<strong style='color:green'>State: </strong><span style='color:white'>"+ d.properties.name + "</span><br>" +
+				var toRet = "<strong style='color:green'>State: </strong><span style='color:white'>"+ d.properties.name + "</span><br>" +
 				"<strong style='color:green'>Month: </strong><span style='color:white'>" + monthmapping[month] +"</span><br>" +
 				"<strong style='color:green'>Year: </strong><span style='color:white'>" + year +"</span><br>"
 				+ "<strong style='color:green'>Positive Sentiment Score: </strong><span style='color:white'>" +Math.round(tooltipInfo[d.properties.name][3] * 1000) / 1000 + "</span><br>"
 				+ "<strong style='color:green'>Negative Sentiment Score: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][1] * 1000) / 1000 + "</span><br>"
 				+ "<strong style='color:green'>First Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][9] * 1000) / 1000  + "</span><br>"
-				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "</span><br>"
+				+ "<strong style='color:green'>Second Dose Rate: </strong><span style='color:white'>" + Math.round(tooltipInfo[d.properties.name][10] * 1000) / 1000  + "</span><br>" + "<hr>"
+				+ "<span style='color:white;'>Top Tweet:</span><br>"
 
+				var stateData = highLikeInfo[d.properties.name]
+				var tweetTextSplitted = stateData[0].split(" ")
+				tweetTexts = []
+				for (var i = 0; i < tweetTextSplitted.length/10; i++) {
+					// tweetTexts.push(tweetTextSplitted.slice(i*10,i*10+10))
+					toRet+= "<span style='color:#ADD8E6; font-size:15px' >"+tweetTextSplitted.slice(i*10,i*10+10).join(" ")+"</span><br>"
+				}
+				toRet+= "<span style='color:white; font-size:15px'>City: "+stateData[1]+", "+stateData[2]+"</span><br>"
+				// toRet+= "<span style='color:white; font-size:15px'>"+stateData[3]+" likes</span><br>"
+				return toRet
 			}
 			
 		});
@@ -331,37 +328,19 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
 	  	.remove();
 		  d3.selectAll(".first_dose_circle")
 	  	.remove();
+		  d3.selectAll(".second_dose_text")
+	  	.remove();
+		  d3.selectAll(".second_dose_value")
+	  	.remove();
+		  d3.selectAll(".second_dose_circle")
+	  	.remove();
 		var data = this.__data__;
 		curState = data.properties.name
-		// console.log(data)
-		// console.log(data.properties.name)
-		// console.log(sentimentValuesWeekly[data.properties.name])
-		// var statedata = sentimentValuesWeekly[data.properties.name]
 		addState(data.properties.name)
-		// var statedata = tooltipInfo[data.properties.name]
-		// console.log(tooltipInfo)
-		// console.log(statedata[9])
-		// console.log(parseFloat(statedata[9]))
-
-		// svg
-		// .append("circle")
-		// .attr("class", "first_dose_circle")
-        // .style("fill",function(d){
-        //     return "green"
-        //   })
-        //   .attr("r", parseFloat(statedata[9]))
-        //   .attr("cx", function(d){return 500})
-        //   .attr("cy", function(d){return 700})
-		
-		// svg.append("text").attr("class", "first_dose_text").text("First Dose Percentage").attr("transform", "translate(430,600)").style("font-size", "20px");
-		// svg.append("text").attr("class", "first_dose_value").text((Math.round(parseFloat(statedata[9]) * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(470,700)").style("font-size", "20px");
 	}
 
 	function addState(state) {
 		var statedata = tooltipInfo[state]
-		console.log(tooltipInfo)
-		console.log(statedata[9])
-		console.log(parseFloat(statedata[9]))
 
 		svg
 		.append("circle")
@@ -370,11 +349,25 @@ function createMap(states_10m, covid_info, covid_info_weekly, useEmotion, year, 
             return "green"
           })
           .attr("r", parseFloat(statedata[9]))
-          .attr("cx", function(d){return 500})
+          .attr("cx", function(d){return 200})
           .attr("cy", function(d){return 700})
 		
-		svg.append("text").attr("class", "first_dose_text").text("First Dose Percentage for "+ state).attr("transform", "translate(400,600)").style("font-size", "20px");
-		svg.append("text").attr("class", "first_dose_value").text((Math.round(parseFloat(statedata[9]) * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(470,700)").style("font-size", "20px");
+		svg.append("text").attr("class", "first_dose_text").text("First Dose Percentage for "+ state).attr("transform", "translate(100,600)").style("font-size", "20px");
+		svg.append("text").attr("class", "first_dose_value").text((Math.round(parseFloat(statedata[9]) * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(170,700)").style("font-size", "20px");
+
+
+		svg
+		.append("circle")
+		.attr("class", "second_dose_circle")
+        .style("fill",function(d){
+            return "green"
+          })
+          .attr("r", parseFloat(statedata[10]))
+          .attr("cx", function(d){return 600})
+          .attr("cy", function(d){return 700})
+		
+		svg.append("text").attr("class", "second_dose_text").text("Second Dose Percentage for "+ state).attr("transform", "translate(500,600)").style("font-size", "20px");
+		svg.append("text").attr("class", "second_dose_value").text((Math.round(parseFloat(statedata[10]) * 1000) / 1000).toString() + "%"  ).attr("transform", "translate(570,700)").style("font-size", "20px");
 
 	}
 
