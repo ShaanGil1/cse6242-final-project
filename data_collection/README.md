@@ -13,7 +13,7 @@ Select the time frame of data that needs to be gather by deleting data that does
 -Root path of all the data that is in being collect (data pulled from github repo)\
 -Path of where compiled data will be stored\
 -Path of compiled data (same as one above)\
--Path of where all twitter data will be stored\
+-Path of where all twitter data will be stored
 
 This file will pull the fields that we found relavant to our project however they can be adjusted if other fields need to be pulled.
 
