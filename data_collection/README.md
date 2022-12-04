@@ -17,15 +17,18 @@ Select the time frame of data that needs to be gather by deleting data that does
 
 This file will pull the fields that we found relavant to our project however they can be adjusted if other fields need to be pulled.
 
-### Data_cleanup.ipynb
+# Data_cleanup.ipynb
+### Description
 This notebook is used to generate the .csv files necessary for our visualizations as well as some miscellanaeous files and data that was used for the experiments of the report.
 
+### Installation
 Requirements: \
 python==3.7 \
 jupyter==1.0.0 \
 numpy==1.19.1 \
 pandas==1.1.0 
 
+### Execution
 All sections (marked by v# in the first cell) can be run by running the import cell at the top then running the cells 1 by 1, assuming you have the necessary .csv file from the cdc website:\
 https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-Jurisdi/unsk-b7fc/data 
 
