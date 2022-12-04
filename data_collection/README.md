@@ -1,3 +1,22 @@
+### data_retrieval.ipynb
+Requirements: \
+python==3.7 \
+jupyter==1.0.0 \
+pandas==1.1.0 \
+tweetpy==(most recent version)
+
+Run all the import cells to make sure you have the all needed packages. And copy paste personal twitter keys into appropriate cell block.\
+Clone the following github repo:\
+https://github.com/shaypal5/awesome-twitter-data
+
+Select the time frame of data that needs to be gather by deleting data that doesn't need to be gathered. The first half the file will compile the data from the github repo and the second half will use the tweet ids to retrive all the data.  The following 4 paths need to be adjusted on the notebook to match the machine that is running the file:\
+-Root path of all the data that is in being collect (data pulled from github repo)\
+-Path of where compiled data will be stored\
+-Path of compiled data (same as one above)\
+-Path of where all twitter data will be stored\
+
+This file will pull the fields that we found relavant to our project however they can be adjusted if other fields need to be pulled.
+
 ### Data_cleanup.ipynb
 Requirements: \
 python==3.7 \
